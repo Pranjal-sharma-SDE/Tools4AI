@@ -15,9 +15,9 @@ import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import lombok.Getter;
 import lombok.extern.java.Log;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
+import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -312,17 +312,18 @@ public class PredictionLoader {
     }
 
     public void processCP() {
+        Reflections reflections = new Reflections("",
+                new SubTypesScanner(),
+                new TypeAnnotationsScanner());
+        Set<Class<?>> predict = reflections.getTypesAnnotatedWith(Predict.class);
+        Set<Class<?>> activateLoader = reflections.getTypesAnnotatedWith(ActivateLoader.class);
+        loader(predict);
+        loader(activateLoader);
+    }
 
-
-        ClassPathScanningCandidateComponentProvider provider =
-                new ClassPathScanningCandidateComponentProvider(true);
-        provider.addIncludeFilter(new AnnotationTypeFilter(Predict.class));
-        provider.addIncludeFilter(new AnnotationTypeFilter(ActivateLoader.class));
-        Set<BeanDefinition> beanDefs = provider
-                .findCandidateComponents("*");
-        beanDefs.stream().forEach(beanDefinition -> {
+    private void loader(Set<Class<?>> loaderClasses) {
+        loaderClasses.forEach(actionCLAZZ->{
             try {
-                Class actionCLAZZ = Class.forName(beanDefinition.getBeanClassName());
                 if (AIAction.class.isAssignableFrom(actionCLAZZ)) {
                     log.info("Class " + actionCLAZZ + " implements AIAction");
                     if (ExtendedPredictedAction.class.isAssignableFrom(actionCLAZZ))
